@@ -14,6 +14,7 @@ class VK
         this.groupId = options.groupId;
         this.token = options.token;
         this.secret = options.secret;
+        this.push = options.push;
 
         // default..
         this.type = options.type;
@@ -49,7 +50,7 @@ class VK
     */
     async on(type, func) 
     {
-        this.secret && callback.post('/cb', (req, res) => {
+        this.secret && callback.post(this.push, (req, res) => {
             let update = req.body;
             if(update.type === 'confirmation') return res.send(this.secret)
             !this.arrayKey.has(update.event_id) && (this.eventPush(update, [type, func]) || this.arrayKey.set(update.event_id))
