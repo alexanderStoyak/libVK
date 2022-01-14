@@ -19,5 +19,6 @@ npm i lib-vk
 const vk = new (require('lib-vk').VK)({token: process.env.TOKEN, groupId: process.env.GROUPID, secret: process.env.SECRET, path: process.env.PATH})
 
 
-vk.track('message_new', newMessage => newMessage.text == 'test' && vk.reply(newMessage, 'This is a reply message') && vk.send(newMessage, 'This is a normal message'))
+vk.track('message_new', newMessage => 
+  newMessage.text == 'test' && vk.reply(newMessage, 'This is a reply message') && vk.send(newMessage, 'This is a normal message'))
 ```
