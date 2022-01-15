@@ -4,7 +4,6 @@
 - Support for both callback and long polling at the same time
 
 ### NPM
-Recommended
 ```
 npm i lib-vk
 ```
