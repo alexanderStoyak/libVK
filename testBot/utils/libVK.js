@@ -2,17 +2,62 @@ const axios = require('axios').default;
 const callback = require('express')();
 const bodyParser = require('body-parser');
 const httpAgent = new (require('http')).Agent({ keepAlive: true });
-callback.use(bodyParser.json());
-callback.listen(80);
 
-class VK 
+
+
+
+class Utils
+{
+
+    // a chat message?
+    isChat(message) 
+    {
+        return message.id === 0;
+    }
+    
+    
+    // checking for a reply message
+    hasReply(message) 
+    {
+        return message.reply_message ? true : false;
+    }
+
+    /** Executing multiple methods at a time 
+    *   Returns an array of received responses from methods
+    *    Example of a structure:
+    *     [constant].parallelExecute([ [ [ [ 'name of the method', {parameter object}], .. ], 'Working with answers [this]' ], .. ])
+    */
+    async parallelExecute(params = []) 
+    {
+        return (await this.Query('execute', {code: `
+            var refunds = [];
+            ${params.map(element => 
+                `var this = [${element[0].map(x=> `API.${x[0]}(${JSON.stringify(x[1])})`).join(',')}]${element[1] ? ';' : ''}
+                ${element[1] ? `refunds.push([this, API.${element[1]}])` : ''}`)
+            .join(';')};
+            return refunds;
+        `}));
+    }
+
+}
+
+
+
+class VK extends Utils
 {
 
     constructor(options) 
     {
+        super(Utils)
+
         this.groupId = options.groupId;
         this.token = options.token;
         this.secret = options.secret;
+        if(this.secret) 
+        {
+            callback.use(bodyParser.json());
+            callback.listen(80);
+        }
         this.path = options.path;
 
         // default..
@@ -26,7 +71,7 @@ class VK
     */
     async Query(method, params)
     {
-        return (await axios.get(`https://api.vk.com/method/${method}`, {params: {access_token: this.token, v: '5.103', ...params}})).data;
+        return (await axios.get(`https://api.vk.com/method/${method}`, {params: {access_token: this.token, v: '5.131', ...params}})).data;
     }
 
 
@@ -36,7 +81,8 @@ class VK
     */
     async track(type, func) 
     {
-        this.secret && callback.post(this.path, (req, res) => {
+        this.secret && callback.post(this.path, (req, res) => 
+        {
             const update = req.body;
             if(update.type === 'confirmation') return res.send(this.secret);
             !this.arrayKey.has(update.event_id) && (this.eventPush(update, [type, func]) || this.arrayKey.set(update.event_id));
@@ -70,14 +116,14 @@ class VK
     // sends a reply message, the parameters are similar in meaning to «send»
     reply(message, params = {}) 
     {
-        return this.send({
+        return this.send(message, {
+            random_id: 0,
             forward: JSON.stringify({
             ...(message.conversation_message_id ? { conversation_message_ids: message.conversation_message_id } : { message_ids: message.id }),
             peer_id: message.peer_id,
             is_reply: true
         }), 
-        ...(typeof params === 'string' ? ({message: params}) : params)},
-        message);
+        ...(typeof params === 'string' ? ({message: params}) : params)});
     };
 
 
@@ -86,18 +132,6 @@ class VK
     *    @param {key} — the key stores the name of your event (key[0]) and the function (key[1])
     */
     eventPush(update, key) {update.type === key[0] && key[1](update.object.message); this.arrayKey.size >= 150 && this.arrayKey.clear()}
-
-
-    // checking for a reply message
-    hasReply(message) {
-        return message.reply_message ? true : false;
-    }
-
-
-    // a chat message?
-    isChat(message) {
-        return message.id === 0;
-    }
 
 };
 
