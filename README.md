@@ -24,6 +24,19 @@ const vk = new (require('lib-vk').VK)({token: process.env.TOKEN, groupId: proces
 vk.track('message_new', message => message.text == 'test' && vk.reply(message, 'This is a reply message') && vk.send(message, 'This is a normal message'))
 ```
 
+## Calling methods
+```js
+const getUser = await vk.Query('users.get', {user_id: 1});
+
+// Calling multiple methods at once 
+const response = await vk.parallelExecute([[ 
+  [
+    ['messages.send', {chat_id: 1, random_id: 0, message: 'send 1'}], ['messages.send', {chat_id: 2, random_id: 0, message: 'send 2'}],
+    ['users.get', {user_ids: [1, 2, 3]}]
+  ]
+]])
+```
+
 ## Implementation of the «kick» command on «parallelExecute» (Instant execution)
 ```js
 if(message.text === '!kick') {
@@ -43,5 +56,6 @@ if(message.text === '!kick') {
   ])
 }
 ```
+
 
 > Если вам есть что предложить прошу написать мне [VK](https://vk.com/alexander_stoyak)
