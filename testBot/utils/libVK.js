@@ -22,6 +22,7 @@ class Utils
         return message.reply_message ? true : false;
     }
 
+
     /** Executing multiple methods at a time 
     *   Returns an array of received responses from methods
     *    Example of a structure:
@@ -29,13 +30,26 @@ class Utils
     */
     async parallelExecute(params = []) 
     {
-        return (await this.Query('execute', {code: `
+        return this.Query('execute', {code: `
             var refunds = [];
             ${params.map(element => 
                 `var this = [${element[0].map(x=> `API.${x[0]}(${JSON.stringify(x[1])})`).join(',')}]${element[1] ? ';' : ''}
                 ${element[1] ? `refunds.push([this, API.${element[1]}])` : ''}`).join(';')};
             return refunds;
-        `}));
+        `});
+    }
+
+
+
+    /** excludes a person or people from the conversation:
+     *   [constant].chatKick({incoming message object}, [ids array])
+     *    VK.chatKick(newMessage, [1, 2, 3])
+    */
+    async chatKick(message, ids = []) 
+    {
+        return Array.isArray(ids) 
+            ? this.parallelExecute([[ ids.map(x => { return ['messages.removeChatUser', {chat_id: message.peer_id - 2000000000, member_id: x}] }) ]])
+            : this.Query('messages.removeChatUser', {chat_id: message.peer_id - 2000000000, member_id: ids});
     }
 
 }
@@ -94,7 +108,7 @@ class VK extends Utils
 
 
     /** simplified message sending, example: 
-    *    [constant].send([incoming message object], 'Hello!')
+    *    [constant].send({incoming message object}, 'Hello!')
     *      VK.send(newMessage, 'Hello!')
     * 
     *    or 
@@ -127,6 +141,6 @@ class VK extends Utils
     */
     eventPush(update, key) {update.type === key[0] && key[1](update.object.message); this.arrayKey.size >= 150 && this.arrayKey.clear()}
 
-};
+}
 
 exports.VK = VK;
