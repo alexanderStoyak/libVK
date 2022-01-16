@@ -31,7 +31,8 @@ const getUser = await vk.Query('users.get', {user_id: 1});
 // Calling multiple methods at once 
 const response = await vk.parallelExecute([[ 
   [
-    ['messages.send', {chat_id: 1, random_id: 0, message: 'send 1'}], ['messages.send', {chat_id: 2, random_id: 0, message: 'send 2'}],
+    ['messages.send', {chat_id: 1, random_id: 0, message: 'send 1'}],
+    ['messages.send', {chat_id: 2, random_id: 0, message: 'send 2'}],
     ['users.get', {user_ids: [1, 2, 3]}]
   ]
 ]])
