@@ -21,7 +21,7 @@ const vk = new (require('lib-vk').VK)({token: process.env.TOKEN, groupId: proces
 vk.track('message_new', newMessage => newMessage.text == 'test' && vk.reply(newMessage, 'This is a reply message') && vk.send(newMessage, 'This is a normal message'))
 ```
 
-## Implementation of the «kick» command on «parallelExecute» (Instant execution)
+### Implementation of the «kick» command on «parallelExecute» (Instant execution)
 ```js
 if(message.text === '!kick') {
   if(!vk.hasReply(message)) return vk.reply(message, 'Нужно ответить на сообщение кого исключить');
