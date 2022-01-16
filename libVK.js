@@ -33,8 +33,7 @@ class Utils
             var refunds = [];
             ${params.map(element => 
                 `var this = [${element[0].map(x=> `API.${x[0]}(${JSON.stringify(x[1])})`).join(',')}]${element[1] ? ';' : ''}
-                ${element[1] ? `refunds.push([this, API.${element[1]}])` : ''}`)
-            .join(';')};
+                ${element[1] ? `refunds.push([this, API.${element[1]}])` : ''}`).join(';')};
             return refunds;
         `}));
     }
@@ -48,16 +47,11 @@ class VK extends Utils
 
     constructor(options) 
     {
-        super(Utils)
+        super(Utils);
 
         this.groupId = options.groupId;
         this.token = options.token;
-        this.secret = options.secret;
-        if(this.secret) 
-        {
-            callback.use(bodyParser.json());
-            callback.listen(80);
-        }
+        this.secret = options.secret ? (callback.use(bodyParser.json()) && callback.listen(80) && options.secret) : options.secret;
         this.path = options.path;
 
         // default..
