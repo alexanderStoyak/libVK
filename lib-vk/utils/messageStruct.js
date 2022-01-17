@@ -28,6 +28,7 @@ module.exports =
         // Reading all outgoing messages in $peerId that arrived before the message with $localId
         type: 'ReadingAllOutMessages',
         struct: [
+            'type',
             'peerId',
             'localId',
 
@@ -63,6 +64,7 @@ module.exports =
     61: {
         type: 'messageTyping',
         struct: [
+            'type',
             'userId',
             'flags'
     
@@ -73,6 +75,7 @@ module.exports =
     62: {
         type: 'messageTypingIsChat',
         struct: [
+            'type',
             'userId',
             'chatId' 
         ]
@@ -84,6 +87,7 @@ module.exports =
     63: {
         type: 'messageTypingsIsChat',
         struct: [
+            'type',
             'userIds',
             'peerId',
             'totalCount',
@@ -95,6 +99,7 @@ module.exports =
     64: {
         type: 'recordsAudiomessage',
         struct: [
+            'type',
             'userIds',
             'peerId',
             'totalCount',

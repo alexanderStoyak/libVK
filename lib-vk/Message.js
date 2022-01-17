@@ -17,9 +17,9 @@ class Message
             structMessage[message[0]].struct.forEach((key, index) => this[key] = message[index]);
             this.userId = this.userId * -1;
         }
-        else
+        else if(typeMessage)
         {
-            structMessage[message[0]].struct.forEach((key, index) => this[key] = message[index+1]);
+            structMessage[message[0]].struct.forEach((key, index) => this[key] = message[index]);
         }
 
 
