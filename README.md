@@ -88,6 +88,7 @@ if(message.text === '!kick') {
 // Reading all outgoing messages in $peerId that arrived before the message with $localId
 * ReadingAllOutMessages 
 {
+    'type'
     'peerId'
     'localId'
 }
@@ -119,6 +120,7 @@ if(message.text === '!kick') {
 //  The event comes once every ~5 seconds when typing. $flags = 1.
 * messageTyping 
 {
+    'type'
     'userId'
     'flags'
 }
@@ -127,6 +129,7 @@ if(message.text === '!kick') {
 // The user $userId types text in the conversation $chatId. 
 * messageTypingIsChat 
 {
+    'type'
     'userId'
     'chatId'
 }
@@ -137,6 +140,7 @@ if(message.text === '!kick') {
 // $ts is the time when this event was generated.
 * messageTypingsIsChat 
 {
+    'type'
     'userIds'
     'peerId'
     'totalCount'
@@ -147,9 +151,10 @@ if(message.text === '!kick') {
 // Users $userIds record an audio message in the conversation $peerId.
 * recordsAudiomessage 
 {
-    'userIds',
-    'peerId',
-    'totalCount',
+    'type'
+    'userIds'
+    'peerId'
+    'totalCount'
     'ts'
 }
 ```
