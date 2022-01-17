@@ -20,8 +20,10 @@ npm i lib-vk
 */
 const vk = new (require('lib-vk').VK)({token: process.env.TOKEN, groupId: process.env.GROUPID, secret: process.env.SECRET, path: process.env.PATH})
 
-
-vk.track('message_new', message => message.text == 'test' && vk.reply(message, 'This is a reply message') && vk.send(message, 'This is a normal message'))
+/** In the event location, you can specify an array of events that will be intercepted (For pages)
+*    Example: ['messageNew', 'messageEdit']
+*/ 
+vk.track('messageNew', message => message.text == 'test' && vk.reply(message, 'This is a reply message') && vk.send(message, 'This is a normal message'))
 ```
 
 ## Calling methods
@@ -58,5 +60,98 @@ if(message.text === '!kick') {
 }
 ```
 
+## The name of all events and their structure for pages
+```
+// Adding a new message.
+* messageNew 
+{
+    'type'
+    'id'
+    'conversation_message_id'
+    'peer_id'
+    'date'
+    'text'
+}
+
+// Edit the message.
+* messageEdit 
+{
+    'type'
+    'id'
+    'conversation_message_id'
+    'peer_id'
+    'date'
+    'text'
+}
+
+
+// Reading all outgoing messages in $peerId that arrived before the message with $localId
+* ReadingAllOutMessages 
+{
+    'peerId'
+    'localId'
+}
+
+
+// A friend of $userId has become online. The extra contains the platform ID.
+// $timestamp — the time of the last action of the user $userId on the site.
+* userOnline 
+{
+    'type'
+    'userId'
+    'extra'
+    'timestamp'
+}
+
+
+// Friend $userId has become offline ($flags is 0 if the user has left the site and 1 if offline by timeout )
+// $timestamp — the time of the last action of the user $userId on the site.
+* userOffline 
+{
+    'type'
+    'userId'
+    'flags'
+    'timestamp'
+}
+
+
+// The user $userId is typing text in the dialog.
+//  The event comes once every ~5 seconds when typing. $flags = 1.
+* messageTyping 
+{
+    'userId'
+    'flags'
+}
+
+
+// The user $userId types text in the conversation $chatId. 
+* messageTypingIsChat 
+{
+    'userId'
+    'chatId'
+}
+
+
+// Users $userIds type text in the conversation $peerId.
+// A maximum of five conversation participants are transmitted, the total number of printers is indicated in $totalCount.
+// $ts is the time when this event was generated.
+* messageTypingsIsChat 
+{
+    'userIds'
+    'peerId'
+    'totalCount'
+    'ts'
+}
+
+
+// Users $userIds record an audio message in the conversation $peerId.
+* recordsAudiomessage 
+{
+    'userIds',
+    'peerId',
+    'totalCount',
+    'ts'
+}
+```
 
 > Если вам есть что предложить прошу написать мне [VK](https://vk.com/alexander_stoyak)
