@@ -18,7 +18,18 @@ npm i lib-vk
 * process.env.SECRET — secret key for working with callback
 * process.env.PATH — path for receiving callback events
 */
-const vk = new (require('lib-vk').VK)({token: process.env.TOKEN, groupId: process.env.GROUPID, secret: process.env.SECRET, path: process.env.PATH})
+const vk = new (require('lib-vk').VK)(
+  { 
+    longPoll: {
+      token: process.env.TOKEN,
+      groupId: process.env.GROUPID
+    },
+    callback: {
+      secret: process.env.SECRET,
+      path: process.env.PATH
+    }
+  }
+)
 
 /** In the event location, you can specify an array of events that will be intercepted (For pages)
 *    Example: ['messageNew', 'messageEdit']
