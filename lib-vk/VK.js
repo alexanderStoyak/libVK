@@ -91,7 +91,7 @@ class VK
     */
     async track(type, func) 
     {
-        this.secret && callback.post(this.path, (req, res) => 
+        (this.secret && this.path) && callback.post(this.path, (req, res) => 
         {
             const update = req.body;
             if(update.type === 'confirmation') return res.send(this.secret);
@@ -104,7 +104,7 @@ class VK
         {
             const response = (await axios.get(this.groupId ? server : 'https://' + server, {params: {key: key, act: 'a_check', wait: 25, ts: ts, mode: '2 | 8 | 32 | 64 | 128', version: 3 , httpAgent: httpAgent}})).data;
             ts = response.ts;
-            if(response.updates) for (const update of response.updates) {(!this.callback || !this.arrayKey.has(update.event_id)) && (this.eventPush(this.groupId ? update : new Message(update), [type, func]) || this.arrayKey.set(update.event_id))};
+            if(response.updates) for (const update of response.updates) {(!this.path || !this.arrayKey.has(update.event_id)) && (this.eventPush(this.groupId ? update : new Message(update), [type, func]) || this.arrayKey.set(update.event_id))};
         };
     }
     
