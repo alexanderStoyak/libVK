@@ -4,19 +4,27 @@ const bodyParser = require('body-parser');
 const httpAgent = new (require('http')).Agent({ keepAlive: true });
 const Message = require('./Message');
 
+
 class VK
 {
     constructor(options) 
     {
+        if(options.longPoll) 
+        {
+            this.groupId = options.longPoll.groupId;
+            this.token = options.longPoll.token;
+        }
 
-        this.groupId = options.groupId;
-        this.token = options.token;
-        this.secret = options.secret ? (callback.use(bodyParser.json()) && callback.listen(80) && options.secret) : options.secret;
-        this.path = options.path;
+        if(options.callback) 
+        {
+            this.secret = options.callback.secret;
+            this.path = options.callback.path;
+            callback.use(bodyParser.json()) && callback.listen(80);
+        }
+
 
         // default..
         this.arrayKey = new Map();
-
     }
 
 
@@ -35,6 +43,7 @@ class VK
             return refunds;
         `});
     }
+
 
     /** excludes a person or people from the conversation:
      *   [constant].chatKick([ids array])
@@ -58,7 +67,7 @@ class VK
     */
     async send(message, params = {})
     {
-        return this.Query('messages.send', typeof params === 'string' ? {message: params, peer_id: message.peer_id, random_id: 0} : params.chat_id ? params : (params.peer_id ? params : (params.peer_id = message.peer_id) && params));
+        return this.Query('messages.send', typeof params === 'string' ? {message: params, peer_id: message.peer_id, random_id: 0} : (params.chat_id ? params : (params.peer_id ? params : (params.peer_id = message.peer_id) && params)));
     }
 
     
@@ -86,16 +95,16 @@ class VK
         {
             const update = req.body;
             if(update.type === 'confirmation') return res.send(this.secret);
-            !this.arrayKey.has(update.event_id) && (this.eventPush(new Message(update), [type, func]) || this.arrayKey.set(update.event_id));
+            !this.arrayKey.has(update.event_id) && (this.eventPush(update, [type, func]) || this.arrayKey.set(update.event_id));
             return res.send('OK');
         });
 
         let {key, server, ts} = (await this.Query(this.groupId ? 'groups.getLongPollServer' : 'messages.getLongPollServer', {[this.groupId ? 'group_id' : 'lp_version']: this.groupId ?? 3})).response;
         while (true)
         {
-            const response = (await axios.get(this.groupId ? server : 'https://' + server, {params: {key: key, act: 'a_check', wait: 25, ts: ts, mode: 128, version: 3 , httpAgent: httpAgent}})).data;
+            const response = (await axios.get(this.groupId ? server : 'https://' + server, {params: {key: key, act: 'a_check', wait: 25, ts: ts, mode: '2 | 8 | 32 | 64 | 128', version: 3 , httpAgent: httpAgent}})).data;
             ts = response.ts;
-            if(response.updates) for (const update of response.updates) {!this.arrayKey.has(update.event_id ?? update[1]) && (this.eventPush(this.groupId ? update : new Message(update), [type, func]) || this.arrayKey.set(update.event_id ?? update[1]))};
+            if(response.updates) for (const update of response.updates) {(!this.callback || !this.arrayKey.has(update.event_id)) && (this.eventPush(this.groupId ? update : new Message(update), [type, func]) || this.arrayKey.set(update.event_id))};
         };
     }
     
@@ -125,7 +134,8 @@ class VK
     }
 
 
-    async loadingMessage(message) {
+    async loadingMessage(message) 
+    {
         return (await this.Query('messages.getById', {message_ids: [message.id]})).response.items[0];
     }
 
@@ -136,7 +146,7 @@ class VK
     */
     eventPush(update, key) 
     {
-        key[0].includes(update.type) && key[1](update.object ? update.object.message : update); this.arrayKey.size >= 150 && this.arrayKey.clear()
+        (key[0].includes(update.type) || !key[0]) && key[1](update.object ? update.object.message : update); this.arrayKey.size >= 150 && this.arrayKey.clear()
     }
 }
 

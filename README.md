@@ -61,101 +61,122 @@ if(message.text === '!kick') {
 ```
 
 ## The name of all events and their structure for pages
+
+- Adding a new message
 ```
-// Adding a new message.
 * messageNew 
 {
-    'type'
-    'id'
-    'conversation_message_id'
-    'peer_id'
-    'date'
-    'text'
+    'type' {string}
+    'id' {integer}
+    'minorId' {integer}
+    'peerId' {integer}
+    'date' {integer}
+    'text' {string}
 }
+```
 
-// Edit the message.
+- Edit the message
+```
 * messageEdit 
 {
-    'type'
-    'id'
-    'conversation_message_id'
-    'peer_id'
-    'date'
-    'text'
+    'type' {string}
+    'id' {integer}
+    'minorId' {integer}
+    'peerId' {integer}
+    'date' {integer}
+    'text' {string}
 }
+```
 
-
-// Reading all outgoing messages in $peerId that arrived before the message with $localId
-* ReadingAllOutMessages 
+- Reading all outgoing messages in $peerId that arrived before the message with $localId
+```
+* readingAllOutMessages 
 {
-    'type'
-    'peerId'
-    'localId'
+    'type' {string}
+    'peerId' {integer}
+    'localId' {integer}
 }
+```
 
-
-// A friend of $userId has become online. The extra contains the platform ID.
-// $timestamp — the time of the last action of the user $userId on the site.
+- A friend of $userId has become online. The extra contains the platform ID
+- $timestamp — the time of the last action of the user $userId on the site
+```
 * userOnline 
 {
-    'type'
-    'userId'
-    'extra'
-    'timestamp'
+    'type' {string}
+    'userId' {integer}
+    'extra' {integer}
+    'timestamp' {integer}
 }
+```
 
-
-// Friend $userId has become offline ($flags is 0 if the user has left the site and 1 if offline by timeout )
-// $timestamp — the time of the last action of the user $userId on the site.
+- Friend $userId has become offline ($flags is 0 if the user has left the site and 1 if offline by timeout)
+- $timestamp — the time of the last action of the user $userId on the site
+```
 * userOffline 
 {
-    'type'
-    'userId'
-    'flags'
-    'timestamp'
+    'type' {sting}
+    'userId' {integer}
+    'flags' {integer}
+    'timestamp' {integer}
 }
+```
 
+- Changing the chat information $peer_id with the type $type_id, $info - additional information about the changes, depends on the type of event
+```
+* changingChatInfo
+{
+    'type' {string}
+    'typeEventIsChat' {string}
+    'peerId' {integer}
+    'infoType' {string OR integer}
+}
+```
 
-// The user $userId is typing text in the dialog.
-//  The event comes once every ~5 seconds when typing. $flags = 1.
+- The user $userId is typing text in the dialog
+-  The event comes once every ~5 seconds when typing. $flags = 1
+```
 * messageTyping 
 {
-    'type'
-    'userId'
-    'flags'
+    'type' {string}
+    'userId' {integer}
+    'flags' {integer}
 }
+```
 
-
-// The user $userId types text in the conversation $chatId. 
+- The user $userId types text in the conversation $chatId
+```
 * messageTypingIsChat 
 {
-    'type'
-    'userId'
-    'chatId'
+    'type' {string}
+    'userId' {integer}
+    'chatId' {integer}
 }
+```
 
-
-// Users $userIds type text in the conversation $peerId.
-// A maximum of five conversation participants are transmitted, the total number of printers is indicated in $totalCount.
-// $ts is the time when this event was generated.
+- Users $userIds type text in the conversation $peerId
+- A maximum of five conversation participants are transmitted, the total number of printers is indicated in $totalCount
+- $ts is the time when this event was generated
+```
 * messageTypingsIsChat 
 {
-    'type'
-    'userIds'
-    'peerId'
-    'totalCount'
-    'ts'
+    'type' {string}
+    'userIds' {integer}
+    'peerId' {integer}
+    'totalCount' {integer}
+    'ts' {integer}
 }
+```
 
-
-// Users $userIds record an audio message in the conversation $peerId.
+- Users $userIds record an audio message in the conversation $peerId
+```
 * recordsAudiomessage 
 {
-    'type'
-    'userIds'
-    'peerId'
-    'totalCount'
-    'ts'
+    'type' {string}
+    'userIds' {integer}
+    'peerId' {integer}
+    'totalCount' {integer}
+    'ts' {integer}
 }
 ```
 
