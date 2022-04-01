@@ -34,14 +34,17 @@ const vk = new (require('lib-vk').VK)(
 /** In the event location, you can specify an array of events that will be intercepted (For pages)
 *    Example: ['messageNew', 'messageEdit']
 */ 
-vk.track('messageNew', message => message.text == 'test' && vk.reply(message, 'This is a reply message') && vk.send(message, 'This is a normal message'))
+vk.track('messageNew', message => 
+  message.text == 'test' &&
+  vk.reply(message, 'This is a reply message') &&
+  vk.send(message, 'This is a normal message'))
 ```
 
 ## Calling methods
 ```js
 const getUser = await vk.Query('users.get', {user_id: 1});
 
-// Calling multiple methods at once 
+// Calling multiple methods at once
 const response = await vk.parallelExecute([[ 
   [
     ['messages.send', {chat_id: 1, random_id: 0, message: 'send 1'}],
@@ -58,22 +61,22 @@ if(message.text === '!kick') {
 
   return vk.parallelExecute([
     [
-      [['messages.removeChatUser', {member_id: message.reply_message.from_id, chat_id: message.peer_id - 2000000000}],
+      [['messages.removeChatUser', {member_id: message.reply_message.from_id, chat_id: message.peer_id - 2e9}],
       ['users.get', {user_ids: message.reply_message.from_id}]],
         `messages.send({random_id: 0, message: !this[0] 
           ? ("Не могу исключить ${message.reply_message.from_id > 0 ? '@id" + this[1][0].id + " (этого пользователя)"' 
-            : `@club${message.reply_message.from_id * -1} (это сообщество)"`}) 
+            : `@club${-message.reply_message.from_id} (это сообщество)"`}) 
               : (" ${message.reply_message.from_id > 0 ? ' @id" + this[1][0].id + "(" + this[1][0].first_name + ") исключён"' 
-                : ` Исключил @club${message.reply_message.from_id * -1} (это сообщество)"`}),
-     chat_id: ${message.peer_id - 2000000000}})`
+                : ` Исключил @club${-message.reply_message.from_id} (это сообщество)"`}),
+     chat_id: ${message.peer_id - 2e9}})`
      ]
   ])
 }
 ```
 
 ## The name of all events and their structure for pages
-
-- Adding a new message
+-
+ Adding a new message
 ```
 * messageNew 
 {
