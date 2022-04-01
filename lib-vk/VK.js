@@ -1,153 +1,224 @@
-const axios = require('axios').default;
-const callback = require('express')();
-const bodyParser = require('body-parser');
-const httpAgent = new (require('http')).Agent({ keepAlive: true });
-const Message = require('./Message');
+const { fetch } = require('undici'),
+{ App: uWS, us_listen_socket_close: serverClose } = require('uWebSockets.js'),
+Message = require('./message'),
+now = require("performance-now"),
+readJson = require('./utils/readJson')
 
 
 class VK
 {
-    constructor(options) 
+    constructor(options = {})
     {
-        if(options.longPoll) 
-        {
-            this.groupId = options.longPoll.groupId;
-            this.token = options.longPoll.token;
-        }
-
-        if(options.callback) 
-        {
-            this.secret = options.callback.secret;
-            this.path = options.callback.path;
-            callback.use(bodyParser.json()) && callback.listen(80);
-        }
+        options.longPoll && (this.token = options.longPoll.token) && (this.groupId = options.longPoll.groupId)
+        options.callback && (this.secret = options.callback.secret) && (this.path = options.callback.path) && (this.callback = {listenSocket: {}, port: options.callback.port ?? 80})
 
 
         // default..
-        this.arrayKey = new Map();
+        this.paramsQueryVK = {ts: 0, server: '', key: ''},
+        this.mapKeys = new Map(),
+        this.mapCallbacks = [],
+        this.startGetingNewEvents = {longPoll: true, callback: true}
+        this.#start()
     }
 
 
-    /** Executing multiple methods at a time 
-    *   Returns an array of received responses from methods
-    *    Example of a structure:
-    *     [constant].parallelExecute([ [ [ [ 'name of the method', {parameter object}], .. ], 'Working with answers [this]' ], .. ])
+    /** Executing multiple methods at a time
+    *
+    * @param params
+    * @returns {Promise<*>}
+    *
+    * Returns an array of received responses from methods
+    * Example of a structure:
+    * `[constant].parallelExecute([ [ [ [ 'name of the method', {parameter object}], .. ], 'Working with answers [this]' ], .. ])`
     */
-    async parallelExecute(params = []) 
+    parallelExecute(params = []) 
     {
         return this.Query('execute', {code: `
             var refunds = [];
-            ${params.map(element => 
-                `var this = [${element[0].map(x=> `API.${x[0]}(${JSON.stringify(x[1])})`).join(',')}]${element[1] ? ';' : ''}
-                ${element[1] ? `refunds.push([this, API.${element[1]}])` : ''}`).join(';')};
-            return refunds;
-        `});
+            ${params.map(element =>
+                `var this = [${element[0].map(x => `API.${x[0]}(${JSON.stringify(x[1])})`).join(',')}];
+                ${element[1] ? `refunds.push([this, API.${element[1]}])` : 'refunds.push([this])'}`).join(';')};
+            return refunds;`})
     }
 
 
     /** excludes a person or people from the conversation:
-     *   [constant].chatKick([ids array])
-     *    newMessage.chatKick([1, 2, 3])
+    *
+    * @param message
+    * @param ids
+    * @returns {Promise<Promise<*>|*>}
+    *
+    * `[constant].chatKick([ids array])
+    * VK.chatKick([1, 2, 3])`
     */
-    async chatKick(message, ids = []) 
+    chatKick(message, ids = []) 
     {
         return Array.isArray(ids) 
-            ? this.parallelExecute([[ ids.map(x => { return ['messages.removeChatUser', {chat_id: message.peer_id - 2000000000, member_id: x}] }) ]])
-            : this.Query('messages.removeChatUser', {chat_id: message.peer_id - 2000000000, member_id: ids});
+            ? this.parallelExecute([[ ids.map(x => { return ['messages.removeChatUser', {chat_id: message.peer_id - 2e9, member_id: x}] }) ]])
+            : this.Query('messages.removeChatUser', {chat_id: message.peer_id - 2e9, member_id: ids})
     }
 
 
-    /** simplified message sending, example: 
-    *    [constant].send({incoming message object}, 'Hello!')
-    *      newMessage.send('Hello!')
-    * 
-    *    or 
-    *     [constant].send({parameter object})
-    *      newMessage.send({message: 'Hello!', chat_id: 1, random_id: 0})
+    /** simplified message sending, example:
+    *
+    * @param message
+    * @param params
+    * @returns {Promise<*>}
+    *
+    * `[constant].send({incoming message object}, 'Hello!')
+    *   VK.send(message, 'Hello!')
+    *
+    *  or
+    *   [constant].send({parameter object})
+    *    VK.send({message: 'Hello!', chat_id: 1, random_id: 0})`
     */
     async send(message, params = {})
     {
-        return this.Query('messages.send', typeof params === 'string' ? {message: params, peer_id: message.peer_id, random_id: 0} : (params.chat_id ? params : (params.peer_id ? params : (params.peer_id = message.peer_id) && params)));
+        typeof params === 'object' && !(params.peer_id = message.peer_id ?? message.peerId) && (params.chat_id = params.chat_id ?? params.chatId)
+        return this.Query('messages.send', typeof params === 'string' ? {message: params, peer_id: message.peer_id, random_id: 0} : (params.chat_id ? params : (message.peer_id ? params : (params.peer_id = message.peer_id) && params)))
     }
 
-    
-    // sends a reply message, the parameters are similar in meaning to «send»
+
+    /** sends a reply message, the parameters are similar in meaning to «send»
+    *
+    * @param message
+    * @param params
+    * @returns {Promise<*>}
+    */
     reply(message, params = {}) 
     {
-        return this.send(message, {
-            random_id: 0,
-            forward: JSON.stringify({
-            ...(this.conversation_message_id ? { conversation_message_ids: message.conversation_message_id } : { message_ids: message.id }),
-            peer_id: message.peer_id,
-            is_reply: true
-        }), 
-        ...(typeof params === 'string' ? ({message: params}) : params)});
+        return this.send(message, {random_id: 0, forward: JSON.stringify({...(message.conversation_message_id ? { conversation_message_ids: message.conversation_message_id } : { message_ids: message.id }), peer_id: message.peer_id, is_reply: true}), ...(typeof params === 'string' ? ({message: params}) : params)})
+    }
+
+
+    /** start receiving new events
+    *
+    * @params type
+    * @returns {Promise<void>}
+    */
+    async #start(type)
+    {
+        ((type === 'callback' || !type) && this.startGetingNewEvents.callback) && (this.secret && this.path) && 
+            uWS().post(this.path, (response, request) => {
+                if(request.getHeader('x-retry-counter')) return response.end('OK')
+                readJson(response, newEvent =>
+                {
+                    if(newEvent.type === 'confirmation') return response.end(this.secret)
+                    newEvent.object.message && (newEvent.object.message.test = {bornOfset: now(), modeEvent: 2});
+                    !this.mapKeys.has(newEvent.event_id) && (this.#eventPush(newEvent) || this.mapKeys.set(newEvent.event_id))
+                    response.end('OK')
+                })
+            }).listen(this.callback.port, listenSocket => this.callback.listenSocket = listenSocket)
+
+
+        if((type === 'longPoll' || !type) && this.startGetingNewEvents.longPoll)
+            for(;this.startGetingNewEvents.longPoll;)
+                for(let newEvent of await this.#getingUpdates())
+                    {
+                        newEvent.object && newEvent.object.message && (newEvent.object.message.test = {bornOfset: now(), modeEvent: 1});
+                        (!this.path || !this.mapKeys.has(newEvent.event_id)) && (this.#eventPush(this.groupId ? newEvent : new Message(newEvent)) || this.mapKeys.set(newEvent.event_id))
+                    }
+    }
+
+
+    /** Getting new events
+    *
+    * @returns {Promise<[*]>}
+    */
+    async #getingUpdates()
+    {
+        !this.paramsQueryVK.key && ({server: this.paramsQueryVK.server, key: this.paramsQueryVK.key, ts: this.paramsQueryVK.ts} = (await this.Query(this.groupId ? 'groups.getLongPollServer' : 'messages.getLongPollServer', {[this.groupId ? 'group_id' : 'lp_version']: this.groupId ?? 3}).catch(error => console.error(error))).response)
+        const response = (await (await fetch(this.groupId ? this.paramsQueryVK.server : 'https://' + this.paramsQueryVK.server, { body: new URLSearchParams({key: this.paramsQueryVK.key, act: 'a_check', wait: 25, ts: this.paramsQueryVK.ts, mode: '2 | 8 | 32 | 64 | 128', version: 3}), method: 'POST'}).catch(() => this.paramsQueryVK.key = '')).json())
+        return ((response.failed === 2 || response.failed === 3) && ((this.paramsQueryVK.key = '') || [])) || ((this.paramsQueryVK.ts = response.ts) && response.updates)
     }
 
 
     /** how to use
-    *    [constant].track('event name', function => {})
-    *     VK.track('message_new', newMessage => VK.reply(newMessage, 'Hello!'))
+    *
+    * @param type
+    * @param func
+    * @returns {void}
+    * 
+    * `[constant].track('event name', function => {})
+    *  VK.track('message_new', newMessage => VK.reply(newMessage, 'Hello!'))`
     */
-    async track(type, func) 
+    track(type, func)
     {
-        (this.secret && this.path) && callback.post(this.path, (req, res) => 
-        {
-            const update = req.body;
-            if(update.type === 'confirmation') return res.send(this.secret);
-            !this.arrayKey.has(update.event_id) && (this.eventPush(update, [type, func]) || this.arrayKey.set(update.event_id));
-            return res.send('OK');
-        });
-
-        let {key, server, ts} = (await this.Query(this.groupId ? 'groups.getLongPollServer' : 'messages.getLongPollServer', {[this.groupId ? 'group_id' : 'lp_version']: this.groupId ?? 3})).response;
-        while (true)
-        {
-            const response = (await axios.get(this.groupId ? server : 'https://' + server, {params: {key: key, act: 'a_check', wait: 25, ts: ts, mode: '2 | 8 | 32 | 64 | 128', version: 3 , httpAgent: httpAgent}})).data;
-            ts = response.ts;
-            if(response.updates) for (const update of response.updates) {(!this.path || !this.arrayKey.has(update.event_id)) && (this.eventPush(this.groupId ? update : new Message(update), [type, func]) || this.arrayKey.set(update.event_id))};
-        };
+        this.mapCallbacks.push([type, func])
     }
-    
 
-    
-    // a chat message?
+
+    /** a chat message?
+    *
+    * @param message
+    * @returns {boolean}
+    */
     isChat(message)
     {
-        return message.peer_id > 2e9;
+        return (message.peer_id ?? message.peerId) > 2e9
     }
 
 
-    // checking for a reply message
+    /** checking for a reply message
+    *
+    * @param message
+    * @returns {boolean}
+    */
     hasReply(message)
     {
-        return !!message.reply_message;
+        return !!(message.reply_message ?? message.replyMessage)
     }
 
 
-    /** calling methods, example: 
-    *    [constant].Query('name of the method', {parameter object})
-    *      newMessage.Query('messages.send', {random_id: 0, chat_id: 1, message: 'Hello!'}) 
+    /** Switching between event receiving types or turning them off
+    *
+    * @param longPoll
+    * @param callback
+    * @returns {longPoll: boolean, callback: boolean}
+    */
+    setTypeEventReceipt({longPoll, callback: callBack})
+    {
+        (typeof callBack === 'boolean' && this.startGetingNewEvents.callback !== callBack) && ((this.startGetingNewEvents.callback = callBack) ? this.#start('callback') : serverClose(this.callback.listenSocket));
+        (typeof longPoll === 'boolean' && this.startGetingNewEvents.longPoll !== longPoll) && (this.startGetingNewEvents.longPoll = longPoll) && this.#start('longPoll');
+        
+        !this.startGetingNewEvents.longPoll && !this.startGetingNewEvents.callback && ((this.startGetingNewEvents.longPoll = true) && this.#start('longPoll'))
+        return this.startGetingNewEvents
+    }
+
+
+    /** calling methods, example:
+    *
+    * @param method
+    * @param params
+    * @returns {*}
+    *
+    * `[constant].Query('name of the method', {parameter object})
+    * VK.Query('messages.send', {random_id: 0, chat_id: 1, message: 'Hello!'})`
     */
     async Query(method, params)
     {
-        return (await axios.get(`https://api.vk.com/method/${method}`, {params: {access_token: this.token, v: '5.131', ...params}})).data;
+        return await (await fetch('https://api.vk.com/method/' + method, { body: new URLSearchParams({ access_token: this.token, v: '5.131', ...params }), method: 'POST' })).json()
     }
 
 
-    async loadingMessage(message) 
+    /** Uploading a message
+    *
+    * @param message
+    * @returns {Promise<{*}>}
+    */
+    async loadingMessage(message)
     {
-        return (await this.Query('messages.getById', {message_ids: [message.id]})).response.items[0];
+        return (await this.Query('messages.getById', {message_ids: [message.id]})).response.items[0]
     }
 
 
     /** sending events to your function
-    *    @param {update} — the object of the new event
-    *    @param {key} — the key stores the name of your event (key[0]) and the function (key[1])
+    *
+    * @param update
     */
-    eventPush(update, key) 
+    #eventPush(update)
     {
-        (key[0].includes(update.type) || !key[0]) && key[1](update.object ? update.object.message : update); this.arrayKey.size >= 150 && this.arrayKey.clear()
+        this.mapCallbacks.forEach(key => {(key[0] === update.type || !key[0]) && key[1](update.object ? ((update.object.typeEvent = update.type) && update.object) : update); this.mapKeys.size >= 150 && this.mapKeys.clear()})
     }
 }
-
-exports.VK = VK;
+exports.VK = VK
