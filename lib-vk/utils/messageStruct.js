@@ -1,7 +1,7 @@
 module.exports = 
 {
+    // Adding a new message.
     4: {
-        // Adding a new message.
         type: 'messageNew',
         struct: [
             'type',
@@ -12,8 +12,8 @@ module.exports =
             'text',
         ]
     },
+    // Edit the message.
     5: {
-        // Edit the message.
         type: 'messageEdit',
         struct: [
             'type',
@@ -24,8 +24,8 @@ module.exports =
             'text'
         ]
     },
+    // Reading all outgoing messages in $peerId that arrived before the message with $localId
     7: {
-        // Reading all outgoing messages in $peerId that arrived before the message with $localId
         type: 'readingAllOutMessages',
         struct: [
             'type',
@@ -122,8 +122,7 @@ module.exports =
             'ts'
         ]
     },
-    /** Users $userIds record an audio message in the conversation $peerId.
-    */
+    // Users $userIds record an audio message in the conversation $peerId.
     64: {
         type: 'recordsAudiomessage',
         struct: [
