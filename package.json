@@ -1,36 +1,35 @@
 {
-  "name": "lib-vk",
-  "version": "1.1.0",
-  "description": "Compact SDK with VK API for Node.js",
-  "main": "./lib-vk/VK.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/alexanderStoyak/libVK.git"
-  },
-  "keywords": [
-    "libvk",
-    "lib-vk",
-    "vk",
-    "вк",
-    "вконтакте",
-    "vkontakte",
-    "sdk",
-    "bot",
-    "node",
-    "js"
-  ],
-  "author": "Alexander Stoyak",
-  "license": "ISC",
-  "dependencies": {
-    "body-parser": "^1.19.1",
-    "express": "^4.17.2",
-    "axios": "^0.24.0"
-  },
-  "bugs": {
-    "url": "https://github.com/alexanderStoyak/libVK/issues"
-  },
-  "homepage": "https://github.com/alexanderStoyak/libVK#readme"
-}
+    "name": "lib-vk",
+    "version": "2.0.1",
+    "description": "Compact SDK with VK API for Node.js",
+    "main": "./lib-vk/VK.js",
+    "scripts": {
+      "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/alexanderStoyak/libVK.git"
+    },
+    "keywords": [
+      "libvk",
+      "lib-vk",
+      "vk",
+      "вк",
+      "вконтакте",
+      "vkontakte",
+      "sdk",
+      "bot",
+      "node",
+      "js"
+    ],
+    "author": "Alexander Stoyak",
+    "license": "ISC",
+    "dependencies": {
+      "undici": "^5.0.0",
+      "performance-now": "^2.1.0"
+    },
+    "bugs": {
+      "url": "https://github.com/alexanderStoyak/libVK/issues"
+    },
+    "homepage": "https://github.com/alexanderStoyak/libVK#readme"
+  }
