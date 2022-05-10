@@ -1,5 +1,9 @@
 const { fetch } = require('undici'),
+<<<<<<< HEAD
 { App: uWS, us_listen_socket_close: serverClose } = require('./utils/uWebSockets/uws'),
+=======
+{ App: uWS, us_listen_socket_close: serverClose } = require('uWebSockets.js'),
+>>>>>>> af4f6bccf3a198e44cd84294521d0c3f1ba8309a
 Message = require('./message'),
 now = require("performance-now"),
 readJson = require('./utils/readJson')
@@ -10,7 +14,11 @@ class VK
     constructor(options = {})
     {
         options.longPoll && (this.token = options.longPoll.token) && (this.groupId = options.longPoll.groupId)
+<<<<<<< HEAD
         options.callback && (this.callback = {secret: options.callback.secret, listenSocket: {}, port: options.callback.port ?? 80, path: options.callback.path})
+=======
+        options.callback && (this.secret = options.callback.secret) && (this.path = options.callback.path) && (this.callback = {listenSocket: {}, port: options.callback.port ?? 80})
+>>>>>>> af4f6bccf3a198e44cd84294521d0c3f1ba8309a
 
 
         // default..
@@ -44,8 +52,12 @@ class VK
             ${params.map(element =>
                 `var this = [${element[0].map(x => `API.${x[0]}(${JSON.stringify(x[1])})`).join(',')}];
                 ${element[1] ? `refunds.push([this, API.${element[1]}])` : 'refunds.push([this])'}`).join(';')};
+<<<<<<< HEAD
             return refunds;`
         })
+=======
+            return refunds;`})
+>>>>>>> af4f6bccf3a198e44cd84294521d0c3f1ba8309a
     }
 
 
@@ -60,7 +72,11 @@ class VK
     */
     chatKick(message, ids = []) 
     {
+<<<<<<< HEAD
         return Array.isArray(ids)
+=======
+        return Array.isArray(ids) 
+>>>>>>> af4f6bccf3a198e44cd84294521d0c3f1ba8309a
             ? this.parallelExecute([[ ids.map(x => { return ['messages.removeChatUser', {chat_id: message.peer_id - 2e9, member_id: x}] }) ]])
             : this.Query('messages.removeChatUser', {chat_id: message.peer_id - 2e9, member_id: ids})
     }
@@ -81,6 +97,7 @@ class VK
     */
     async send(message, params = {})
     {
+<<<<<<< HEAD
         typeof params === 'object' && !(message.peer_id || message.peerId ? params.peer_id = message.peer_id ?? message.peerId : 0) && (params.chat_id = params.chat_id ?? params.chatId)
         return this.Query('messages.send', typeof params === 'string' ? {message: params, peer_id: message.peer_id, random_id: 0} : (params.chat_id ? params : (message.peer_id ? params : (params.peer_id = message.peer_id) && params)))
     }
@@ -143,6 +160,63 @@ class VK
                 .catch(error => console.error(error))).response ?? {server: '', key: 0, ts: 0})
         let response = await fetch(this.groupId ? this.paramsQueryVK.server : 'https://' + this.paramsQueryVK.server, { body: new URLSearchParams({key: this.paramsQueryVK.key, act: 'a_check', wait: 25, ts: this.paramsQueryVK.ts, mode: '2 | 8 | 32 | 64 | 128', version: 3}), method: 'POST'}).catch(() => this.paramsQueryVK.key = '')
         if(response.ok) response = await response.json(); else return []
+=======
+        typeof params === 'object' && !(params.peer_id = message.peer_id ?? message.peerId) && (params.chat_id = params.chat_id ?? params.chatId)
+        return this.Query('messages.send', typeof params === 'string' ? {message: params, peer_id: message.peer_id, random_id: 0} : (params.chat_id ? params : (message.peer_id ? params : (params.peer_id = message.peer_id) && params)))
+    }
+
+
+    /** sends a reply message, the parameters are similar in meaning to «send»
+    *
+    * @param message
+    * @param params
+    * @returns {Promise<*>}
+    */
+    reply(message, params = {}) 
+    {
+        return this.send(message, {random_id: 0, forward: JSON.stringify({...(message.conversation_message_id ? { conversation_message_ids: message.conversation_message_id } : { message_ids: message.id }), peer_id: message.peer_id, is_reply: true}), ...(typeof params === 'string' ? ({message: params}) : params)})
+    }
+
+
+    /** start receiving new events
+    *
+    * @params type
+    * @returns {Promise<void>}
+    */
+    async #start(type)
+    {
+        ((type === 'callback' || !type) && this.startGetingNewEvents.callback) && (this.secret && this.path) && 
+            uWS().post(this.path, (response, request) => {
+                if(request.getHeader('x-retry-counter')) return response.end('OK')
+                readJson(response, newEvent =>
+                {
+                    if(newEvent.type === 'confirmation') return response.end(this.secret)
+                    newEvent.object.message && (newEvent.object.message.test = {bornOfset: now(), modeEvent: 2});
+                    !this.mapKeys.has(newEvent.event_id) && (this.#eventPush(newEvent) || this.mapKeys.set(newEvent.event_id))
+                    response.end('OK')
+                })
+            }).listen(this.callback.port, listenSocket => this.callback.listenSocket = listenSocket)
+
+
+        if((type === 'longPoll' || !type) && this.startGetingNewEvents.longPoll)
+            for(;this.startGetingNewEvents.longPoll;)
+                for(let newEvent of await this.#getingUpdates())
+                    {
+                        newEvent.object && newEvent.object.message && (newEvent.object.message.test = {bornOfset: now(), modeEvent: 1});
+                        (!this.path || !this.mapKeys.has(newEvent.event_id)) && (this.#eventPush(this.groupId ? newEvent : new Message(newEvent)) || this.mapKeys.set(newEvent.event_id))
+                    }
+    }
+
+
+    /** Getting new events
+    *
+    * @returns {Promise<[*]>}
+    */
+    async #getingUpdates()
+    {
+        !this.paramsQueryVK.key && ({server: this.paramsQueryVK.server, key: this.paramsQueryVK.key, ts: this.paramsQueryVK.ts} = (await this.Query(this.groupId ? 'groups.getLongPollServer' : 'messages.getLongPollServer', {[this.groupId ? 'group_id' : 'lp_version']: this.groupId ?? 3}).catch(error => console.error(error))).response)
+        const response = (await (await fetch(this.groupId ? this.paramsQueryVK.server : 'https://' + this.paramsQueryVK.server, { body: new URLSearchParams({key: this.paramsQueryVK.key, act: 'a_check', wait: 25, ts: this.paramsQueryVK.ts, mode: '2 | 8 | 32 | 64 | 128', version: 3}), method: 'POST'}).catch(() => this.paramsQueryVK.key = '')).json())
+>>>>>>> af4f6bccf3a198e44cd84294521d0c3f1ba8309a
         return ((response.failed === 2 || response.failed === 3) && ((this.paramsQueryVK.key = '') || [])) || ((this.paramsQueryVK.ts = response.ts) && response.updates)
     }
 
@@ -181,6 +255,7 @@ class VK
     hasReply(message)
     {
         return !!(message.reply_message ?? message.replyMessage)
+<<<<<<< HEAD
     }
 
 
@@ -200,6 +275,27 @@ class VK
     }
 
 
+=======
+    }
+
+
+    /** Switching between event receiving types or turning them off
+    *
+    * @param longPoll
+    * @param callback
+    * @returns {longPoll: boolean, callback: boolean}
+    */
+    setTypeEventReceipt({longPoll, callback: callBack})
+    {
+        (typeof callBack === 'boolean' && this.startGetingNewEvents.callback !== callBack) && ((this.startGetingNewEvents.callback = callBack) ? this.#start('callback') : serverClose(this.callback.listenSocket));
+        (typeof longPoll === 'boolean' && this.startGetingNewEvents.longPoll !== longPoll) && (this.startGetingNewEvents.longPoll = longPoll) && this.#start('longPoll');
+        
+        !this.startGetingNewEvents.longPoll && !this.startGetingNewEvents.callback && ((this.startGetingNewEvents.longPoll = true) && this.#start('longPoll'))
+        return this.startGetingNewEvents
+    }
+
+
+>>>>>>> af4f6bccf3a198e44cd84294521d0c3f1ba8309a
     /** calling methods, example:
     *
     * @param method
@@ -232,6 +328,7 @@ class VK
     */
     #eventPush(update)
     {
+<<<<<<< HEAD
         for(const key of this.mapCallbacks) 
         {
             (key[0] === update.type || !key[0]) && 
@@ -241,3 +338,9 @@ class VK
     }
 }
 exports.VK = VK
+=======
+        this.mapCallbacks.forEach(key => {(key[0] === update.type || !key[0]) && key[1](update.object ? ((update.object.typeEvent = update.type) && update.object) : update); this.mapKeys.size >= 150 && this.mapKeys.clear()})
+    }
+}
+exports.VK = VK
+>>>>>>> af4f6bccf3a198e44cd84294521d0c3f1ba8309a

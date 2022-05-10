@@ -1,6 +1,10 @@
 {
     "name": "lib-vk",
+<<<<<<< HEAD
     "version": "2.0.1",
+=======
+    "version": "2.0.0",
+>>>>>>> af4f6bccf3a198e44cd84294521d0c3f1ba8309a
     "description": "Compact SDK with VK API for Node.js",
     "main": "./lib-vk/VK.js",
     "scripts": {
@@ -26,10 +30,18 @@
     "license": "ISC",
     "dependencies": {
       "undici": "^5.0.0",
+<<<<<<< HEAD
+=======
+      "uWebSockets.js": "^20.6.0",
+>>>>>>> af4f6bccf3a198e44cd84294521d0c3f1ba8309a
       "performance-now": "^2.1.0"
     },
     "bugs": {
       "url": "https://github.com/alexanderStoyak/libVK/issues"
     },
     "homepage": "https://github.com/alexanderStoyak/libVK#readme"
+<<<<<<< HEAD
   }
+=======
+  }
+>>>>>>> af4f6bccf3a198e44cd84294521d0c3f1ba8309a
