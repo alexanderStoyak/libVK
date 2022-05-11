@@ -17,7 +17,7 @@ class VK
         this.paramsQueryVK = {ts: 0, server: '', key: ''},
         this.mapKeys = new Map(),
         this.mapCallbacks = [],
-        this.startGetingNewEvents = {longPoll: true, callback: true}
+        this.startGetingNewEvents = {longPoll: !!options.longPoll, callback: !!this.callback}
         this.#start()
     }
 
@@ -99,7 +99,7 @@ class VK
     */
     async #start(type)
     {
-        ((type === 'callback' || !type) && this.startGetingNewEvents.callback) && (this.callback.secret && this.callback.path) && 
+        ((type === 'callback' || !type) && this.startGetingNewEvents.callback) && this.callback.path && 
             uWS().post(this.callback.path, (response, request) => {
                 if(request.getHeader('x-retry-counter')) return response.end('OK');
                 readJson(response, newEvent =>

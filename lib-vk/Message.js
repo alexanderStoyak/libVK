@@ -20,7 +20,7 @@ class Message
             this.isChat = this.peerId > 2e9
             this.isChat && (this.chatId = this.peerId - 2e9)
 
-            message[6] && ((this.senderId = +message[6].from) ?? (this.senderId = this.peerId))
+            message[6] && ((this.senderId = +message[6].from) ?? (this.senderId = this.peerId));
 
             (message[6] && message[6].source_act) && (this.event = {eventType: message[6].source_act, eventUserId: message[6].source_mid})
 
@@ -32,7 +32,7 @@ class Message
             this.addition = message[7]
         }
 
-        (typeMessage === 'userOnline' || typeMessage === 'userOffline') && (this.userId = -this.userId)
+        (typeMessage === 'userOnline' || typeMessage === 'userOffline') && (this.userId = -this.userId);
         (typeMessage === 'changingChatInfo')
             && (this.typeEventIsChat = structMessage.typeEventIsChat[this.typeEventIsChat])
             && (this[structMessage.infoType[message[1]]] = message[3])
